@@ -19,6 +19,12 @@
             show="share"
           />
           <action
+            v-if="headerButtons.copyFileLink"
+            icon="link"
+            :label="t('buttons.copyFileLink')"
+            @action="copyFileLink"
+          />
+          <action
             v-if="headerButtons.rename"
             icon="mode_edit"
             :label="t('buttons.rename')"
@@ -90,6 +96,12 @@
         icon="share"
         :label="t('buttons.share')"
         show="share"
+      />
+      <action
+        v-if="headerButtons.copyFileLink"
+        icon="link"
+        :label="t('buttons.copyFileLink')"
+        @action="copyFileLink"
       />
       <action
         v-if="headerButtons.rename"
@@ -260,6 +272,12 @@
             show="share"
           />
           <action
+            v-if="headerButtons.copyFileLink"
+            icon="link"
+            :label="t('buttons.copyFileLink')"
+            @action="copyFileLink"
+          />
+          <action
             v-if="headerButtons.rename"
             icon="mode_edit"
             :label="t('buttons.rename')"
@@ -336,8 +354,9 @@ import { useClipboardStore } from "@/stores/clipboard";
 import { useFileStore } from "@/stores/file";
 import { useLayoutStore } from "@/stores/layout";
 
-import { users, files as api } from "@/api";
+import { users, files as api, share, pub } from "@/api";
 import { enableExec } from "@/utils/constants";
+import { copy } from "@/utils/clipboard";
 import * as upload from "@/utils/upload";
 import css from "@/utils/css";
 import { throttle } from "lodash-es";
@@ -371,6 +390,7 @@ const isContextMenuVisible = ref<boolean>(false);
 const contextMenuPos = ref<{ x: number; y: number }>({ x: 0, y: 0 });
 
 const $showError = inject<IToastError>("$showError")!;
+const $showSuccess = inject<IToastSuccess>("$showSuccess")!;
 
 const clipboardStore = useClipboardStore();
 const authStore = useAuthStore();
@@ -472,6 +492,7 @@ const headerButtons = computed(() => {
     delete: fileStore.selectedCount > 0 && authStore.user?.perm.delete,
     rename: fileStore.selectedCount === 1 && authStore.user?.perm.rename,
     share: fileStore.selectedCount === 1 && authStore.user?.perm.share,
+    copyFileLink: fileStore.selectedCount === 1 && authStore.user?.perm.share,
     move: fileStore.selectedCount > 0 && authStore.user?.perm.rename,
     copy: fileStore.selectedCount > 0 && authStore.user?.perm.create,
   };
@@ -924,6 +945,42 @@ const windowsResize = throttle(() => {
   // Fill but not fit the window
   fillWindow();
 }, 100);
+
+const copyFileLink = async () => {
+  if (fileStore.selectedCount !== 1 || fileStore.req === null) return;
+
+  try {
+    const res = (await share.create(
+      fileStore.req.items[fileStore.selected[0]].url,
+      "", // no password
+      "7", // 7 units (1 week)
+      "days"
+    )) as Share;
+
+    const url = pub.getDownloadURL(
+      { hash: res.hash, path: "" } as Resource,
+      false
+    );
+
+    copy({ text: url }).then(
+      () => {
+        $showSuccess(t("success.linkCopied"));
+      },
+      () => {
+        copy({ text: url }, { permission: true }).then(
+          () => {
+            $showSuccess(t("success.linkCopied"));
+          },
+          (e) => {
+            $showError(e);
+          }
+        );
+      }
+    );
+  } catch (error: any) {
+    $showError(error);
+  }
+};
 
 const download = () => {
   if (fileStore.req === null) return;
