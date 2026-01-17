@@ -356,7 +356,7 @@ import { useLayoutStore } from "@/stores/layout";
 
 import { users, files as api, share, pub } from "@/api";
 import { enableExec } from "@/utils/constants";
-import { copy } from "@/utils/clipboard";
+import { copyAsync } from "@/utils/clipboard";
 import * as upload from "@/utils/upload";
 import css from "@/utils/css";
 import { throttle } from "lodash-es";
@@ -946,40 +946,36 @@ const windowsResize = throttle(() => {
   fillWindow();
 }, 100);
 
-const copyFileLink = async () => {
+const copyFileLink = () => {
   if (fileStore.selectedCount !== 1 || fileStore.req === null) return;
 
-  try {
-    const res = (await share.create(
+  // Create the promise for the URL - don't await!
+  // This is required for iOS Safari: clipboard must be "reserved" synchronously
+  // within the user gesture, but data can be fulfilled asynchronously.
+  const urlPromise = share
+    .create(
       fileStore.req.items[fileStore.selected[0]].url,
       "", // no password
       "7", // 7 units (1 week)
       "days"
-    )) as Share;
+    )
+    .then((res) => {
+      const shareRes = res as Share;
+      return pub.getDownloadURL(
+        { hash: shareRes.hash, path: "" } as Resource,
+        false
+      );
+    });
 
-    const url = pub.getDownloadURL(
-      { hash: res.hash, path: "" } as Resource,
-      false
-    );
-
-    copy({ text: url }).then(
-      () => {
-        $showSuccess(t("success.linkCopied"));
-      },
-      () => {
-        copy({ text: url }, { permission: true }).then(
-          () => {
-            $showSuccess(t("success.linkCopied"));
-          },
-          (e) => {
-            $showError(e);
-          }
-        );
-      }
-    );
-  } catch (error: any) {
-    $showError(error);
-  }
+  // Call copyAsync synchronously within the click gesture
+  copyAsync(urlPromise).then(
+    () => {
+      $showSuccess(t("success.linkCopied"));
+    },
+    (e) => {
+      $showError(e);
+    }
+  );
 };
 
 const download = () => {

@@ -102,3 +102,38 @@ function createTemporaryTextarea(text: string) {
   Object.assign(textarea.style, styles);
   return textarea;
 }
+
+/**
+ * Copy text to clipboard using a Promise for the text content.
+ * This is required for iOS Safari compatibility when the text is obtained
+ * asynchronously (e.g., from an API call) because iOS requires clipboard
+ * operations to be initiated synchronously within the user gesture.
+ *
+ * By using ClipboardItem with a Promise-based blob, the clipboard is
+ * "reserved" synchronously during the click, and the data is filled in
+ * when the Promise resolves.
+ */
+export function copyAsync(textPromise: Promise<string>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (
+      window.isSecureContext &&
+      typeof navigator.clipboard !== "undefined" &&
+      typeof ClipboardItem !== "undefined"
+    ) {
+      // Create ClipboardItem with promised data - must be called synchronously in gesture
+      const blobPromise = textPromise.then(
+        (text) => new Blob([text], { type: "text/plain" })
+      );
+      const clipboardItem = new ClipboardItem({
+        "text/plain": blobPromise,
+      });
+      navigator.clipboard.write([clipboardItem]).then(resolve).catch(reject);
+    } else {
+      // Fallback: wait for text then use legacy method
+      textPromise
+        .then((text) => copy({ text }))
+        .then(resolve)
+        .catch(reject);
+    }
+  });
+}
