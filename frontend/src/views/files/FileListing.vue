@@ -1020,16 +1020,9 @@ const openInVlc = () => {
     // iOS uses vlc-x-callback URL scheme
     vlcUrl = `vlc-x-callback://x-callback-url/stream?url=${encodeURIComponent(fileUrl)}`;
   } else {
-    // Android uses intent URL scheme
-    const mimeType = item.type === "video" ? "video/*" : "audio/*";
-    vlcUrl =
-      `intent://${fileUrl}#Intent;` +
-      `scheme=https;` +
-      `package=org.videolan.vlc;` +
-      `type=${mimeType};` +
-      `S.title=${encodeURIComponent(item.name)};` +
-      `S.browser_fallback_url=${encodeURIComponent(fileUrl)};` +
-      `end`;
+    // Android uses vlc:// URL scheme
+    // Format: vlc://https://example.com/video.mp4
+    vlcUrl = `vlc://${fileUrl}`;
   }
 
   window.location.href = vlcUrl;
