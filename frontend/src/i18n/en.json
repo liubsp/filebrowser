@@ -17,6 +17,7 @@
     "hideDotfiles": "Hide dotfiles",
     "info": "Info",
     "copyFileLink": "Copy file link (expires in 1 week)",
+    "openInVlc": "Open in VLC",
     "more": "More",
     "move": "Move",
     "moveFile": "Move file",

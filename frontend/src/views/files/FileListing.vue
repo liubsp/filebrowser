@@ -25,6 +25,12 @@
             @action="copyFileLink"
           />
           <action
+            v-if="headerButtons.openInVlc"
+            icon="play_circle"
+            :label="t('buttons.openInVlc')"
+            @action="openInVlc"
+          />
+          <action
             v-if="headerButtons.rename"
             icon="mode_edit"
             :label="t('buttons.rename')"
@@ -102,6 +108,12 @@
         icon="link"
         :label="t('buttons.copyFileLink')"
         @action="copyFileLink"
+      />
+      <action
+        v-if="headerButtons.openInVlc"
+        icon="play_circle"
+        :label="t('buttons.openInVlc')"
+        @action="openInVlc"
       />
       <action
         v-if="headerButtons.rename"
@@ -276,6 +288,12 @@
             icon="link"
             :label="t('buttons.copyFileLink')"
             @action="copyFileLink"
+          />
+          <action
+            v-if="headerButtons.openInVlc"
+            icon="play_circle"
+            :label="t('buttons.openInVlc')"
+            @action="openInVlc"
           />
           <action
             v-if="headerButtons.rename"
@@ -493,6 +511,10 @@ const headerButtons = computed(() => {
     rename: fileStore.selectedCount === 1 && authStore.user?.perm.rename,
     share: fileStore.selectedCount === 1 && authStore.user?.perm.share,
     copyFileLink: fileStore.selectedCount === 1 && authStore.user?.perm.share,
+    openInVlc:
+      fileStore.selectedCount === 1 &&
+      (isAndroid() || isIOS()) &&
+      isMediaFile(fileStore.req?.items[fileStore.selected[0]]),
     move: fileStore.selectedCount > 0 && authStore.user?.perm.rename,
     copy: fileStore.selectedCount > 0 && authStore.user?.perm.create,
   };
@@ -501,6 +523,14 @@ const headerButtons = computed(() => {
 const isMobile = computed(() => {
   return width.value <= 736;
 });
+
+const isAndroid = () => /Android/i.test(navigator.userAgent);
+const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+const isMediaFile = (item: ResourceItem | undefined) => {
+  if (!item) return false;
+  return item.type === "video" || item.type === "audio";
+};
 
 watch(req, () => {
   // Reset the show value
@@ -976,6 +1006,33 @@ const copyFileLink = () => {
       $showError(e);
     }
   );
+};
+
+const openInVlc = () => {
+  if (fileStore.selectedCount !== 1 || fileStore.req === null) return;
+
+  const item = fileStore.req.items[fileStore.selected[0]];
+  const fileUrl = window.location.origin + api.getDownloadURL(item, false);
+
+  let vlcUrl: string;
+
+  if (isIOS()) {
+    // iOS uses vlc-x-callback URL scheme
+    vlcUrl = `vlc-x-callback://x-callback-url/stream?url=${encodeURIComponent(fileUrl)}`;
+  } else {
+    // Android uses intent URL scheme
+    const mimeType = item.type === "video" ? "video/*" : "audio/*";
+    vlcUrl =
+      `intent://${fileUrl}#Intent;` +
+      `scheme=https;` +
+      `package=org.videolan.vlc;` +
+      `type=${mimeType};` +
+      `S.title=${encodeURIComponent(item.name)};` +
+      `S.browser_fallback_url=${encodeURIComponent(fileUrl)};` +
+      `end`;
+  }
+
+  window.location.href = vlcUrl;
 };
 
 const download = () => {
