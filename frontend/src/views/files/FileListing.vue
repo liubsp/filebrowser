@@ -513,7 +513,7 @@ const headerButtons = computed(() => {
     copyFileLink: fileStore.selectedCount === 1 && authStore.user?.perm.share,
     openInVlc:
       fileStore.selectedCount === 1 &&
-      (isAndroid() || isIOS()) &&
+      (isAndroidChrome() || isIOS()) &&
       isMediaFile(fileStore.req?.items[fileStore.selected[0]]),
     move: fileStore.selectedCount > 0 && authStore.user?.perm.rename,
     copy: fileStore.selectedCount > 0 && authStore.user?.perm.create,
@@ -526,6 +526,9 @@ const isMobile = computed(() => {
 
 const isAndroid = () => /Android/i.test(navigator.userAgent);
 const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+// Chrome on Android (intent:// URLs only work in Chrome-based browsers)
+const isAndroidChrome = () =>
+  isAndroid() && /Chrome\/\d+/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
 
 const isMediaFile = (item: ResourceItem | undefined) => {
   if (!item) return false;
@@ -1020,9 +1023,18 @@ const openInVlc = () => {
     // iOS uses vlc-x-callback URL scheme
     vlcUrl = `vlc-x-callback://x-callback-url/stream?url=${encodeURIComponent(fileUrl)}`;
   } else {
-    // Android uses vlc:// URL scheme
-    // Format: vlc://https://example.com/video.mp4
-    vlcUrl = `vlc://${fileUrl}`;
+    // Android uses intent:// URL scheme with ACTION_VIEW
+    // The URL without scheme goes after intent://, scheme is specified separately
+    const urlWithoutScheme = fileUrl.replace(/^https?:\/\//, "");
+    const scheme = fileUrl.startsWith("https://") ? "https" : "http";
+    const mimeType = item.type === "video" ? "video/*" : "audio/*";
+    vlcUrl =
+      `intent://${urlWithoutScheme}#Intent;` +
+      `scheme=${scheme};` +
+      `action=android.intent.action.VIEW;` +
+      `type=${mimeType};` +
+      `package=org.videolan.vlc;` +
+      `end`;
   }
 
   window.location.href = vlcUrl;
