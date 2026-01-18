@@ -49,7 +49,7 @@ export const openInVlc = async (item: {
   url: string;
   type: string;
 }): Promise<void> => {
-  const shareRes: Share = await share.create(item.url, "", "7", "days");
+  const shareRes: Share = await share.create(item.url, "", "1", "days");
   const fileUrl = pub.getDownloadURL(shareRes, false);
 
   let vlcUrl: string;
@@ -72,8 +72,8 @@ export const openInVlc = async (item: {
       `package=org.videolan.vlc;` +
       `end`;
   } else {
-    // macOS and Windows use vlc:// scheme
-    vlcUrl = `vlc://${fileUrl}`;
+    // macOS and Windows use vlc:// scheme with encoded URL
+    vlcUrl = `vlc://${encodeURIComponent(fileUrl)}`;
   }
 
   window.location.href = vlcUrl;
