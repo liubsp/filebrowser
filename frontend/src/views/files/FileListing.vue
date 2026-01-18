@@ -513,7 +513,7 @@ const headerButtons = computed(() => {
     copyFileLink: fileStore.selectedCount === 1 && authStore.user?.perm.share,
     openInVlc:
       fileStore.selectedCount === 1 &&
-      (isAndroidChrome() || isIOS()) &&
+      (isAndroid() || isIOS()) &&
       isMediaFile(fileStore.req?.items[fileStore.selected[0]]),
     move: fileStore.selectedCount > 0 && authStore.user?.perm.rename,
     copy: fileStore.selectedCount > 0 && authStore.user?.perm.create,
@@ -525,12 +525,21 @@ const isMobile = computed(() => {
 });
 
 const isAndroid = () => /Android/i.test(navigator.userAgent);
-const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
-// Chrome on Android (intent:// URLs only work in Chrome-based browsers)
-const isAndroidChrome = () =>
-  isAndroid() &&
-  /Chrome\/\d+/.test(navigator.userAgent) &&
-  !/Edg/.test(navigator.userAgent);
+const isIOS = () => {
+  if (typeof window === "undefined") return false; // SSR safety
+
+  const nav = window.navigator;
+
+  // 1. Direct check (iPhone/iPod and iPads in Mobile Mode)
+  const isDirectIOS = /iPhone|iPod|iPad/i.test(nav.userAgent);
+
+  // 2. The "Hidden" iPad Check (Apple Silicon & Intel iPads in Desktop Mode)
+  // Real Macs (MacBooks/iMacs) report 0 or 1 maxTouchPoints.
+  const isDesktopModeIPad =
+    /Macintosh/i.test(nav.userAgent) && nav.maxTouchPoints > 1;
+
+  return isDirectIOS || isDesktopModeIPad;
+};
 
 const isMediaFile = (item: ResourceItem | undefined) => {
   if (!item) return false;
