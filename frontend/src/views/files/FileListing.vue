@@ -528,7 +528,9 @@ const isAndroid = () => /Android/i.test(navigator.userAgent);
 const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
 // Chrome on Android (intent:// URLs only work in Chrome-based browsers)
 const isAndroidChrome = () =>
-  isAndroid() && /Chrome\/\d+/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
+  isAndroid() &&
+  /Chrome\/\d+/.test(navigator.userAgent) &&
+  !/Edg/.test(navigator.userAgent);
 
 const isMediaFile = (item: ResourceItem | undefined) => {
   if (!item) return false;
@@ -1015,7 +1017,7 @@ const openInVlc = () => {
   if (fileStore.selectedCount !== 1 || fileStore.req === null) return;
 
   const item = fileStore.req.items[fileStore.selected[0]];
-  const fileUrl = window.location.origin + api.getDownloadURL(item, false);
+  const fileUrl = api.getDownloadURL(item, false);
 
   let vlcUrl: string;
 
