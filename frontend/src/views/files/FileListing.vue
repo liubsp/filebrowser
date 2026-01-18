@@ -983,10 +983,7 @@ const copyFileLink = () => {
     )
     .then((res) => {
       const shareRes = res as Share;
-      return pub.getDownloadURL(
-        { hash: shareRes.hash, path: "" } as Resource,
-        false
-      );
+      return pub.getDownloadURL({ hash: shareRes.hash, path: "" }, false);
     });
 
   // Call copyAsync synchronously within the click gesture

@@ -34,7 +34,7 @@ export async function create(
       unit: unit,
     });
   }
-  return fetchJSON(url, {
+  return fetchJSON<Share>(url, {
     method: "POST",
     body: body,
   });

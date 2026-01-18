@@ -1,5 +1,4 @@
 import { share, pub } from "@/api";
-import type { Resource, Share } from "@/types";
 
 export const isAndroid = (): boolean => {
   return /Android/i.test(navigator.userAgent);
@@ -21,6 +20,18 @@ export const isIOS = (): boolean => {
   return isDirectIOS || isDesktopModeIPad;
 };
 
+export const isMacOS = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return (
+    /Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints <= 1
+  );
+};
+
+export const isWindows = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return /Windows NT/i.test(navigator.userAgent);
+};
+
 export const isMediaFile = (item: { type?: string } | undefined): boolean => {
   if (!item) return false;
   return item.type === "video" || item.type === "audio";
@@ -29,18 +40,17 @@ export const isMediaFile = (item: { type?: string } | undefined): boolean => {
 export const isVlcAvailable = (
   item: { type?: string } | undefined
 ): boolean => {
-  return (isAndroid() || isIOS()) && isMediaFile(item);
+  return (
+    (isAndroid() || isIOS() || isMacOS() || isWindows()) && isMediaFile(item)
+  );
 };
 
 export const openInVlc = async (item: {
   url: string;
   type: string;
 }): Promise<void> => {
-  const shareRes = (await share.create(item.url, "", "7", "days")) as Share;
-  const fileUrl = await pub.getDownloadURL(
-    { hash: shareRes.hash, path: "" } as Resource,
-    false
-  );
+  const shareRes: Share = await share.create(item.url, "", "7", "days");
+  const fileUrl = pub.getDownloadURL(shareRes, false);
 
   let vlcUrl: string;
 
@@ -49,7 +59,7 @@ export const openInVlc = async (item: {
     vlcUrl = `vlc-x-callback://x-callback-url/stream?url=${encodeURIComponent(
       fileUrl
     )}`;
-  } else {
+  } else if (isAndroid()) {
     // Android uses intent:// URL scheme with ACTION_VIEW
     const urlWithoutScheme = fileUrl.replace(/^https?:\/\//, "");
     const scheme = fileUrl.startsWith("https://") ? "https" : "http";
@@ -61,6 +71,9 @@ export const openInVlc = async (item: {
       `type=${mimeType};` +
       `package=org.videolan.vlc;` +
       `end`;
+  } else {
+    // macOS and Windows use vlc:// scheme
+    vlcUrl = `vlc://${fileUrl}`;
   }
 
   window.location.href = vlcUrl;

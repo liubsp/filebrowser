@@ -65,7 +65,7 @@ export function download(
   window.open(url);
 }
 
-export function getDownloadURL(res: Resource, inline = false) {
+export function getDownloadURL(res: Resource | Share, inline = false) {
   const params = {
     ...(inline && { inline: "true" }),
     ...(res.token && { token: res.token }),
