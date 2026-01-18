@@ -53,6 +53,7 @@ import { filesize } from "@/utils";
 import dayjs from "dayjs";
 import { files as api } from "@/api";
 import * as upload from "@/utils/upload";
+import { isVlcAvailable, openInVlc } from "@/utils/vlc";
 import { computed, inject, ref } from "vue";
 import { useRouter } from "vue-router";
 
@@ -308,7 +309,16 @@ const click = (event: Event | KeyboardEvent) => {
   fileStore.selected.push(props.index);
 };
 
-const open = () => {
+const open = async () => {
+  if (isVlcAvailable(props)) {
+    try {
+      await openInVlc(props);
+      return;
+    } catch (e) {
+      // Fall back to built-in player on error
+      console.error("VLC open failed:", e);
+    }
+  }
   router.push({ path: props.url });
 };
 
