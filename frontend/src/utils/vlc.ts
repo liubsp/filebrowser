@@ -72,8 +72,8 @@ export const openInVlc = async (item: {
       `package=org.videolan.vlc;` +
       `end`;
   } else {
-    // macOS and Windows use vlc:// scheme with encoded URL
-    vlcUrl = `vlc://${encodeURIComponent(fileUrl)}`;
+    // macOS and Windows use vlc: scheme
+    vlcUrl = `vlc:${fileUrl}`;
   }
 
   window.location.href = vlcUrl;
