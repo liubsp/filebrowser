@@ -50,7 +50,7 @@ export const openInVlc = async (item: {
   type: string;
 }): Promise<void> => {
   const shareRes: Share = await share.create(item.url, "", "1", "days");
-  const fileUrl = pub.getDownloadURL(shareRes, false);
+  const fileUrl = pub.getDownloadURL({ hash: shareRes.hash, path: "" }, false);
 
   let vlcUrl: string;
 
