@@ -1023,7 +1023,7 @@ const openInVlc = () => {
 
   if (isIOS()) {
     // iOS uses vlc-x-callback URL scheme
-    vlcUrl = `vlc-x-callback://x-callback-url/stream?url=${encodeURIComponent(fileUrl)}`;
+    vlcUrl = `vlc-x-callback://x-callback-url/stream?url=${encodeURI(fileUrl)}`;
   } else {
     // Android uses intent:// URL scheme with ACTION_VIEW
     // The URL without scheme goes after intent://, scheme is specified separately
