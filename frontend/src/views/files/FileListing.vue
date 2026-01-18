@@ -1022,33 +1022,43 @@ const copyFileLink = () => {
   );
 };
 
-const openInVlc = () => {
+const openInVlc = async () => {
   if (fileStore.selectedCount !== 1 || fileStore.req === null) return;
 
   const item = fileStore.req.items[fileStore.selected[0]];
-  const fileUrl = api.getDownloadURL(item, false);
 
-  let vlcUrl: string;
+  try {
+    const shareRes = (await share.create(item.url, "", "7", "days")) as Share;
+    const fileUrl = await pub.getDownloadURL(
+      { hash: shareRes.hash, path: "" } as Resource,
+      false
+    );
 
-  if (isIOS()) {
-    // iOS uses vlc-x-callback URL scheme
-    vlcUrl = `vlc-x-callback://x-callback-url/stream?url=${encodeURI(fileUrl)}`;
-  } else {
-    // Android uses intent:// URL scheme with ACTION_VIEW
-    // The URL without scheme goes after intent://, scheme is specified separately
-    const urlWithoutScheme = fileUrl.replace(/^https?:\/\//, "");
-    const scheme = fileUrl.startsWith("https://") ? "https" : "http";
-    const mimeType = item.type === "video" ? "video/*" : "audio/*";
-    vlcUrl =
-      `intent://${urlWithoutScheme}#Intent;` +
-      `scheme=${scheme};` +
-      `action=android.intent.action.VIEW;` +
-      `type=${mimeType};` +
-      `package=org.videolan.vlc;` +
-      `end`;
+    let vlcUrl: string;
+
+    if (isIOS()) {
+      // iOS uses vlc-x-callback URL scheme
+      vlcUrl = `vlc-x-callback://x-callback-url/stream?url=${encodeURIComponent(
+        fileUrl
+      )}`;
+    } else {
+      // Android uses intent:// URL scheme with ACTION_VIEW
+      const urlWithoutScheme = fileUrl.replace(/^https?:\/\//, "");
+      const scheme = fileUrl.startsWith("https://") ? "https" : "http";
+      const mimeType = item.type === "video" ? "video/*" : "audio/*";
+      vlcUrl =
+        `intent://${urlWithoutScheme}#Intent;` +
+        `scheme=${scheme};` +
+        `action=android.intent.action.VIEW;` +
+        `type=${mimeType};` +
+        `package=org.videolan.vlc;` +
+        `end`;
+    }
+
+    window.location.href = vlcUrl;
+  } catch (e: any) {
+    $showError(e);
   }
-
-  window.location.href = vlcUrl;
 };
 
 const download = () => {
