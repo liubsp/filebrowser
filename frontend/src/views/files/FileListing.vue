@@ -19,12 +19,6 @@
             show="share"
           />
           <action
-            v-if="headerButtons.copyFileLink"
-            icon="link"
-            :label="t('buttons.copyFileLink')"
-            @action="copyFileLink"
-          />
-          <action
             v-if="headerButtons.openInVlc"
             icon="play_circle"
             :label="t('buttons.openInVlc')"
@@ -108,12 +102,6 @@
         icon="share"
         :label="t('buttons.share')"
         show="share"
-      />
-      <action
-        v-if="headerButtons.copyFileLink"
-        icon="link"
-        :label="t('buttons.copyFileLink')"
-        @action="copyFileLink"
       />
       <action
         v-if="headerButtons.openInVlc"
@@ -296,12 +284,6 @@
             show="share"
           />
           <action
-            v-if="headerButtons.copyFileLink"
-            icon="link"
-            :label="t('buttons.copyFileLink')"
-            @action="copyFileLink"
-          />
-          <action
             v-if="headerButtons.openInVlc"
             icon="play_circle"
             :label="t('buttons.openInVlc')"
@@ -390,9 +372,8 @@ import { useClipboardStore } from "@/stores/clipboard";
 import { useFileStore } from "@/stores/file";
 import { useLayoutStore } from "@/stores/layout";
 
-import { users, files as api, share, pub } from "@/api";
+import { users, files as api } from "@/api";
 import { enableExec } from "@/utils/constants";
-import { copyAsync } from "@/utils/clipboard";
 import * as upload from "@/utils/upload";
 import * as externalPlayers from "@/utils/externalPlayers";
 import css from "@/utils/css";
@@ -427,7 +408,6 @@ const isContextMenuVisible = ref<boolean>(false);
 const contextMenuPos = ref<{ x: number; y: number }>({ x: 0, y: 0 });
 
 const $showError = inject<IToastError>("$showError")!;
-const $showSuccess = inject<IToastSuccess>("$showSuccess")!;
 
 const clipboardStore = useClipboardStore();
 const authStore = useAuthStore();
@@ -529,7 +509,6 @@ const headerButtons = computed(() => {
     delete: fileStore.selectedCount > 0 && authStore.user?.perm.delete,
     rename: fileStore.selectedCount === 1 && authStore.user?.perm.rename,
     share: fileStore.selectedCount === 1 && authStore.user?.perm.share,
-    copyFileLink: fileStore.selectedCount === 1 && authStore.user?.perm.share,
     openInVlc:
       fileStore.selectedCount === 1 &&
       externalPlayers.isVlcAvailable(fileStore.req?.items[fileStore.selected[0]]),
@@ -990,35 +969,6 @@ const windowsResize = throttle(() => {
   // Fill but not fit the window
   fillWindow();
 }, 100);
-
-const copyFileLink = () => {
-  if (fileStore.selectedCount !== 1 || fileStore.req === null) return;
-
-  // Create the promise for the URL - don't await!
-  // This is required for iOS Safari: clipboard must be "reserved" synchronously
-  // within the user gesture, but data can be fulfilled asynchronously.
-  const urlPromise = share
-    .create(
-      fileStore.req.items[fileStore.selected[0]].url,
-      "", // no password
-      "7", // 7 units (1 week)
-      "days"
-    )
-    .then((res) => {
-      const shareRes = res as Share;
-      return pub.getDownloadURL({ hash: shareRes.hash, path: "" }, false);
-    });
-
-  // Call copyAsync synchronously within the click gesture
-  copyAsync(urlPromise).then(
-    () => {
-      $showSuccess(t("success.linkCopied"));
-    },
-    (e) => {
-      $showError(e);
-    }
-  );
-};
 
 const openInVlc = async () => {
   if (fileStore.selectedCount !== 1 || fileStore.req === null) return;
