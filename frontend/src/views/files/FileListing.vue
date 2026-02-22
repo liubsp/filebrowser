@@ -31,6 +31,12 @@
             @action="openInVlc"
           />
           <action
+            v-if="headerButtons.openInJustPlayer"
+            icon="tv"
+            :label="t('buttons.openInJustPlayer')"
+            @action="openInJustPlayer"
+          />
+          <action
             v-if="headerButtons.rename"
             icon="mode_edit"
             :label="t('buttons.rename')"
@@ -114,6 +120,12 @@
         icon="play_circle"
         :label="t('buttons.openInVlc')"
         @action="openInVlc"
+      />
+      <action
+        v-if="headerButtons.openInJustPlayer"
+        icon="tv"
+        :label="t('buttons.openInJustPlayer')"
+        @action="openInJustPlayer"
       />
       <action
         v-if="headerButtons.rename"
@@ -296,6 +308,12 @@
             @action="openInVlc"
           />
           <action
+            v-if="headerButtons.openInJustPlayer"
+            icon="tv"
+            :label="t('buttons.openInJustPlayer')"
+            @action="openInJustPlayer"
+          />
+          <action
             v-if="headerButtons.rename"
             icon="mode_edit"
             :label="t('buttons.rename')"
@@ -376,7 +394,7 @@ import { users, files as api, share, pub } from "@/api";
 import { enableExec } from "@/utils/constants";
 import { copyAsync } from "@/utils/clipboard";
 import * as upload from "@/utils/upload";
-import * as vlc from "@/utils/vlc";
+import * as externalPlayers from "@/utils/externalPlayers";
 import css from "@/utils/css";
 import { throttle } from "lodash-es";
 import { Base64 } from "js-base64";
@@ -514,7 +532,12 @@ const headerButtons = computed(() => {
     copyFileLink: fileStore.selectedCount === 1 && authStore.user?.perm.share,
     openInVlc:
       fileStore.selectedCount === 1 &&
-      vlc.isVlcAvailable(fileStore.req?.items[fileStore.selected[0]]),
+      externalPlayers.isVlcAvailable(fileStore.req?.items[fileStore.selected[0]]),
+    openInJustPlayer:
+      fileStore.selectedCount === 1 &&
+      externalPlayers.isJustPlayerAvailable(
+        fileStore.req?.items[fileStore.selected[0]]
+      ),
     move: fileStore.selectedCount > 0 && authStore.user?.perm.rename,
     copy: fileStore.selectedCount > 0 && authStore.user?.perm.create,
   };
@@ -1003,7 +1026,19 @@ const openInVlc = async () => {
   const item = fileStore.req.items[fileStore.selected[0]];
 
   try {
-    await vlc.openInVlc(item);
+    await externalPlayers.openInVlc(item);
+  } catch (e: any) {
+    $showError(e);
+  }
+};
+
+const openInJustPlayer = async () => {
+  if (fileStore.selectedCount !== 1 || fileStore.req === null) return;
+
+  const item = fileStore.req.items[fileStore.selected[0]];
+
+  try {
+    await externalPlayers.openInJustPlayer(item);
   } catch (e: any) {
     $showError(e);
   }

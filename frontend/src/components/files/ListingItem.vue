@@ -53,7 +53,7 @@ import { filesize } from "@/utils";
 import dayjs from "dayjs";
 import { files as api } from "@/api";
 import * as upload from "@/utils/upload";
-import { isVlcAvailable, openInVlc } from "@/utils/vlc";
+import { isVlcAvailable, openInVlc } from "@/utils/externalPlayers";
 import { computed, inject, ref } from "vue";
 import { useRouter } from "vue-router";
 

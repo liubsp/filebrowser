@@ -45,12 +45,23 @@ export const isVlcAvailable = (
   );
 };
 
+export const isJustPlayerAvailable = (
+  item: { type?: string } | undefined
+): boolean => {
+  if (!item) return false;
+  return isAndroid() && item.type === "video";
+};
+
+const createSharedFileUrl = async (itemUrl: string): Promise<string> => {
+  const shareRes: Share = await share.create(itemUrl, "", "1", "days");
+  return pub.getDownloadURL({ hash: shareRes.hash, path: "" }, false);
+};
+
 export const openInVlc = async (item: {
   url: string;
   type: string;
 }): Promise<void> => {
-  const shareRes: Share = await share.create(item.url, "", "1", "days");
-  const fileUrl = pub.getDownloadURL({ hash: shareRes.hash, path: "" }, false);
+  const fileUrl = await createSharedFileUrl(item.url);
 
   let vlcUrl: string;
 
@@ -77,4 +88,23 @@ export const openInVlc = async (item: {
   }
 
   window.location.href = vlcUrl;
+};
+
+export const openInJustPlayer = async (item: {
+  url: string;
+  type: string;
+}): Promise<void> => {
+  const fileUrl = await createSharedFileUrl(item.url);
+  const urlWithoutScheme = fileUrl.replace(/^https?:\/\//, "");
+  const scheme = fileUrl.startsWith("https://") ? "https" : "http";
+
+  const justPlayerUrl =
+    `intent://${urlWithoutScheme}#Intent;` +
+    `scheme=${scheme};` +
+    `action=android.intent.action.VIEW;` +
+    `type=video/*;` +
+    `package=com.brouken.player;` +
+    `end`;
+
+  window.location.href = justPlayerUrl;
 };
