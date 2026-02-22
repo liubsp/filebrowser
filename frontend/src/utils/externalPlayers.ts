@@ -1,5 +1,8 @@
 import { share, pub } from "@/api";
 
+const SHARE_REUSE_MIN_REMAINING_SECONDS = 12 * 60 * 60;
+const EXTERNAL_PLAYER_SHARE_DURATION_DAYS = "7";
+
 export const isAndroid = (): boolean => {
   return /Android/i.test(navigator.userAgent);
 };
@@ -52,9 +55,63 @@ export const isJustPlayerAvailable = (
   return isAndroid() && item.type === "video";
 };
 
+const isReusableShare = (link: Share): boolean => {
+  const expire = Number(link.expire);
+
+  if (expire === 0) {
+    return true;
+  }
+
+  if (!Number.isFinite(expire) || expire <= 0) {
+    return false;
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return expire - nowSeconds > SHARE_REUSE_MIN_REMAINING_SECONDS;
+};
+
+const getReusableShare = async (itemUrl: string): Promise<Share | undefined> => {
+  try {
+    const res = (await share.get(itemUrl)) as Share[] | Share;
+    const links = Array.isArray(res) ? res : [res];
+
+    return links
+      .filter((link) => !!link && !(link as any).password_hash)
+      .filter((link) => isReusableShare(link))
+      .sort((a, b) => {
+        const expireA = Number(a.expire);
+        const expireB = Number(b.expire);
+
+        if (expireA === 0) return -1;
+        if (expireB === 0) return 1;
+
+        return expireB - expireA;
+      })[0];
+  } catch (_e) {
+    return undefined;
+  }
+};
+
 const createSharedFileUrl = async (itemUrl: string): Promise<string> => {
-  const shareRes: Share = await share.create(itemUrl, "", "1", "days");
-  return pub.getDownloadURL({ hash: shareRes.hash, path: "" }, false);
+  const existingShare = await getReusableShare(itemUrl);
+
+  if (existingShare) {
+    return pub.getDownloadURL(
+      { hash: existingShare.hash, path: "", token: existingShare.token },
+      false
+    );
+  }
+
+  const shareRes: Share = await share.create(
+    itemUrl,
+    "",
+    EXTERNAL_PLAYER_SHARE_DURATION_DAYS,
+    "days"
+  );
+  return pub.getDownloadURL(
+    { hash: shareRes.hash, path: "", token: shareRes.token },
+    false
+  );
 };
 
 export const openInVlc = async (item: {
