@@ -53,7 +53,12 @@ import { filesize } from "@/utils";
 import dayjs from "dayjs";
 import { files as api } from "@/api";
 import * as upload from "@/utils/upload";
-import { isVlcAvailable, openInVlc } from "@/utils/externalPlayers";
+import {
+  isJustPlayerAvailable,
+  isVlcAvailable,
+  openInJustPlayer,
+  openInVlc,
+} from "@/utils/externalPlayers";
 import { computed, inject, ref } from "vue";
 import { useRouter } from "vue-router";
 
@@ -310,6 +315,16 @@ const click = (event: Event | KeyboardEvent) => {
 };
 
 const open = async () => {
+  if (isJustPlayerAvailable(props)) {
+    try {
+      await openInJustPlayer(props);
+      return;
+    } catch (e) {
+      // Fall back to other players or built-in player on error
+      console.error("Just Player open failed:", e);
+    }
+  }
+
   if (isVlcAvailable(props)) {
     try {
       await openInVlc(props);
